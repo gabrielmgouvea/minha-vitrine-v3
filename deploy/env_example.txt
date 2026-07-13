@@ -1,0 +1,28 @@
+# Exemplo de arquivo de configuração
+# Renomeie este arquivo para .env e ajuste os valores
+
+# Django
+SECRET_KEY=django-insecure-change-this-in-production
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Banco de Dados (SQLite é o padrão)
+# Para PostgreSQL, descomente e ajuste:
+# DATABASE_URL=postgresql://user:password@localhost:5432/vitrine_db
+
+# Email (para produção)
+# EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# EMAIL_HOST=smtp.gmail.com
+# EMAIL_PORT=587
+# EMAIL_USE_TLS=True
+# EMAIL_HOST_USER=seu_email@gmail.com
+# EMAIL_HOST_PASSWORD=sua_senha
+
+# APIs Externas
+# GOOGLE_MAPS_API_KEY=sua_chave_aqui
+
+# Segurança (para produção)
+# SECURE_SSL_REDIRECT=True
+# SESSION_COOKIE_SECURE=True
+# CSRF_COOKIE_SECURE=True
+

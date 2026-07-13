@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Feedbacks dos Usuários – Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="padding: 2.5rem 0 1.5rem;">
+    <div class="container">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+            <span class="badge-admin" style="font-size: 1rem; padding: 0.4rem 0.9rem;"><i class="fas fa-shield-alt"></i> Painel Admin</span>
+            <h1 style="font-size: 1.8rem; margin: 0;">Caixa de Sugestões</h1>
+        </div>
+        <p style="color: var(--text-secondary);">Mensagens de feedback enviadas pelos usuários do sistema.</p>
+    </div>
+</div>
+
+<div class="container" style="padding-bottom: 3rem;">
+    {% if feedbacks %}
+        <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 860px; margin: 0 auto;">
+            {% for fb in feedbacks %}
+            <div class="feedback-card">
+                <div class="feedback-card-header">
+                    <div class="feedback-user">
+                        <i class="fas fa-user-circle" style="font-size: 1.8rem; color: var(--primary);"></i>
+                        <div>
+                            <strong>{{ fb.usuario.first_name|default:fb.usuario.username }}</strong>
+                            <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">{{ fb.usuario.email }}</span>
+                        </div>
+                    </div>
+                    <span class="feedback-date">
+                        <i class="fas fa-calendar-alt"></i> {{ fb.criado_em|date:"d/m/Y H:i" }}
+                    </span>
+                </div>
+                <p class="feedback-message">{{ fb.mensagem }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 4rem 0; color: var(--text-secondary);">
+            <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.4; display: block; margin-bottom: 1rem;"></i>
+            <p>Nenhuma sugestão recebida ainda.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.feedback-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow var(--transition), border-color var(--transition);
+}
+
+.feedback-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary), var(--shadow-md);
+}
+
+.feedback-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.feedback-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.feedback-date {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.feedback-message {
+    color: var(--text-primary);
+    line-height: 1.65;
+    border-left: 3px solid var(--primary);
+    padding-left: 1rem;
+    margin: 0;
+}
+</style>
+{% endblock %}

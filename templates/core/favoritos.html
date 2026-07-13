@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Meus Favoritos - Minha Vitrine{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1><i class="fas fa-star"></i> Meus Favoritos</h1>
+        <p>Estabelecimentos que você salvou</p>
+    </div>
+</div>
+
+<section class="favoritos-section">
+    <div class="container">
+        {% if estabelecimentos %}
+            <div class="establishments-grid">
+                {% for estabelecimento in estabelecimentos %}
+                    <div class="establishment-card">
+                        <div class="card-image-wrapper">
+                            {% if estabelecimento.imagem_principal %}
+                                <img src="{{ estabelecimento.imagem_principal.url }}" alt="{{ estabelecimento.nome }}" class="card-image">
+                            {% else %}
+                                <div class="card-image-placeholder">
+                                    <i class="fas fa-store"></i>
+                                </div>
+                            {% endif %}
+                            
+                            <button class="favorite-btn favorited" 
+                                    data-id="{{ estabelecimento.id }}"
+                                    onclick="toggleFavorite({{ estabelecimento.id }})">
+                                <i class="fas fa-star"></i>
+                                <span>Favoritos</span>
+                            </button>
+                        </div>
+                        
+                        <div class="card-content">
+                            <h3 class="card-title">{{ estabelecimento.nome }}</h3>
+                            <p class="card-category">{{ estabelecimento.categoria.nome }}</p>
+                            <p class="card-description">{{ estabelecimento.descricao|truncatewords:20 }}</p>
+                            
+                            {% if estabelecimento.media_avaliacoes %}
+                                <div class="card-rating">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= estabelecimento.media_avaliacoes %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span>({{ estabelecimento.total_avaliacoes }})</span>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="card-actions">
+                                <a href="{% url 'estabelecimento_detalhe' estabelecimento.id %}" class="btn-view-details">
+                                    Ver Detalhes <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-favorites">
+                <i class="fas fa-heart-broken"></i>
+                <h3>Você ainda não tem favoritos</h3>
+                <p>Explore os estabelecimentos e adicione seus favoritos!</p>
+                <a href="{% url 'home' %}" class="btn-primary">Explorar Estabelecimentos</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFavorite(estabelecimentoId) {
+    fetch(`/estabelecimento/${estabelecimentoId}/favoritar/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remover o card da página se foi desfavoritado
+            if (!data.is_favorito) {
+                location.reload();
+            }
+        }
+    })
+    .catch(error => console.error('Erro:', error));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,469 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ evento.nome }} - Minha Vitrine{% endblock %}
+
+{% block content %}
+<div class="evento-detalhes-page">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="breadcrumb">
+            <a href="{% url 'home' %}"><i class="fas fa-home"></i> Início</a>
+            <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+            <a href="{% url 'eventos' %}">Eventos</a>
+            <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+            <span class="breadcrumb-current">{{ evento.nome }}</span>
+        </nav>
+        
+        <div class="evento-detalhes-card">
+            {% if evento.banner or evento.fotos.all %}
+                <div class="evento-slider-container">
+                    <div class="evento-slider">
+                        {% if evento.banner %}
+                            <div class="evento-slide active">
+                                <img src="{{ evento.banner.url }}" alt="" class="evento-slide-bg">
+                                <img src="{{ evento.banner.url }}" alt="{{ evento.nome }}" class="evento-banner-img">
+                            </div>
+                        {% endif %}
+                        {% for foto in evento.fotos.all %}
+                            <div class="evento-slide {% if not evento.banner and forloop.first %}active{% endif %}">
+                                <img src="{{ foto.imagem.url }}" alt="" class="evento-slide-bg">
+                                <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda|default:evento.nome }}" class="evento-banner-img">
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if evento.fotos.all %}
+                        <!-- Controls for Carousel -->
+                        <button type="button" class="slider-btn prev-btn" aria-label="Anterior">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button type="button" class="slider-btn next-btn" aria-label="Próximo">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        
+                        <!-- Indicators -->
+                        <div class="slider-indicators">
+                            {% if evento.banner %}
+                                <span class="indicator active" data-slide-to="0"></span>
+                            {% endif %}
+                            {% for foto in evento.fotos.all %}
+                                <span class="indicator {% if not evento.banner and forloop.first %}active{% endif %}" data-slide-to="{% if evento.banner %}{{ forloop.counter }}{% else %}{{ forloop.counter0 }}{% endif %}"></span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <div class="evento-detalhes-content">
+                <span class="evento-tipo-badge">{{ evento.get_tipo_display }}</span>
+                <h1>{{ evento.nome }}</h1>
+                
+                <div class="evento-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <div>
+                            <strong>Data</strong>
+                            <p>{{ evento.data_inicio|date:"d/m/Y" }}{% if evento.data_fim %} até {{ evento.data_fim|date:"d/m/Y" }}{% endif %}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="meta-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <strong>Horário</strong>
+                            <p>{{ evento.hora_inicio|time:"H:i" }}{% if evento.hora_fim %} às {{ evento.hora_fim|time:"H:i" }}{% endif %}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="meta-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <strong>Local</strong>
+                            <p>{{ evento.localizacao }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="evento-descricao-section">
+                    <h2>Sobre o Evento</h2>
+                    <p>{{ evento.descricao }}</p>
+                </div>
+                
+                <div class="evento-actions">
+                    <div class="evento-actions-left">
+                        <div class="share-wrap" id="shareWrap">
+                            <button type="button" class="btn-compartilhar" id="btnCompartilhar" aria-expanded="false" aria-haspopup="true">
+                                <i class="fas fa-share-alt"></i> Compartilhar
+                            </button>
+                            <div class="share-popover" id="sharePopover" role="menu">
+                                <button type="button" class="btn-copiar-link" id="btnCopiarUrl" data-url="{{ request.scheme }}://{{ request.get_host }}{{ request.get_full_path }}">
+                                    <i class="fas fa-link"></i> Copiar link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="evento-actions-right">
+                        <a href="{% url 'mapa_interativo' %}?evento={{ evento.id }}" class="btn-ver-mapa">
+                            <i class="fas fa-map-marker-alt"></i> Ver no Mapa
+                        </a>
+                        <a href="{% url 'eventos' %}" class="btn-voltar">
+                            <i class="fas fa-arrow-left"></i> Voltar para Eventos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lightbox Modal -->
+    <div id="imageLightbox" class="lightbox-modal" hidden>
+        <span class="lightbox-close">&times;</span>
+        <img class="lightbox-content" id="lightboxImage">
+        <div id="lightboxCaption" class="lightbox-caption"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.evento-slider-container {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    overflow: hidden;
+    background: #000;
+}
+
+.evento-slider {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.evento-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+    overflow: hidden;
+}
+
+.evento-slide.active {
+    opacity: 1;
+    z-index: 1;
+}
+
+.evento-slide-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(20px) brightness(0.35);
+    transform: scale(1.15);
+    pointer-events: none;
+}
+
+.evento-banner-img {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    z-index: 2;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Slider Controls */
+.slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all var(--transition);
+}
+
+.slider-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.prev-btn { left: 1.25rem; }
+.next-btn { right: 1.25rem; }
+
+/* Indicators */
+.slider-indicators {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.6rem;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-pill);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slider-indicators .indicator {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.slider-indicators .indicator:hover {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.slider-indicators .indicator.active {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+@media (max-width: 768px) {
+    .evento-slider-container {
+        height: 280px;
+    }
+    .slider-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    .prev-btn { left: 0.75rem; }
+    .next-btn { right: 0.75rem; }
+}
+
+/* Lightbox Modal */
+.lightbox-modal {
+    position: fixed;
+    z-index: 5000;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    padding: 2rem;
+}
+.lightbox-modal[hidden] {
+    display: none !important;
+}
+.lightbox-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 2rem;
+    color: #f1f1f1;
+    font-size: 3rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    line-height: 1;
+}
+.lightbox-close:hover {
+    color: var(--primary);
+    transform: scale(1.1);
+}
+.lightbox-content {
+    max-width: 90%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    animation: zoomIn 0.3s ease;
+}
+@keyframes zoomIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.lightbox-caption {
+    margin-top: 1.5rem;
+    color: #ccc;
+    font-size: 1rem;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Compartilhar
+    var wrap = document.getElementById('shareWrap');
+    var btn = document.getElementById('btnCompartilhar');
+    var popover = document.getElementById('sharePopover');
+    var copiar = document.getElementById('btnCopiarUrl');
+
+    function positionPopover() {
+        var rect = btn.getBoundingClientRect();
+        popover.style.left = rect.left + 'px';
+        popover.style.top = (rect.top - popover.offsetHeight - 8) + 'px';
+    }
+
+    if (wrap && btn && copiar && popover) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = wrap.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', isOpen);
+            if (isOpen) positionPopover();
+        });
+        window.addEventListener('resize', function() {
+            if (wrap.classList.contains('is-open')) positionPopover();
+        });
+        document.addEventListener('click', function() {
+            wrap.classList.remove('is-open');
+            btn.setAttribute('aria-expanded', 'false');
+        });
+        popover.addEventListener('click', function(e) { e.stopPropagation(); });
+        copiar.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var url = copiar.getAttribute('data-url') || window.location.href;
+            function showFeedback() {
+                copiar.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                copiar.disabled = true;
+                setTimeout(function() {
+                    copiar.innerHTML = '<i class="fas fa-link"></i> Copiar link';
+                    copiar.disabled = false;
+                }, 2000);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(showFeedback).catch(function() {
+                    var ta = document.createElement('textarea');
+                    ta.value = url;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showFeedback();
+                });
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = url;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showFeedback();
+            }
+            // NÃO fecha o popover ao clicar em copiar
+        });
+    }
+
+    // Slider de Fotos do Evento
+    var slides = document.querySelectorAll('.evento-slide');
+    var indicators = document.querySelectorAll('.slider-indicators .indicator');
+    var prevBtn = document.querySelector('.prev-btn');
+    var nextBtn = document.querySelector('.next-btn');
+    var currentSlide = 0;
+    var slideInterval;
+    var intervalTime = 4000; // Mudar automaticamente a cada 4 segundos
+
+    if (slides.length <= 1) return;
+
+    function showSlide(index) {
+        slides[currentSlide].classList.remove('active');
+        if (indicators.length > 0) {
+            indicators[currentSlide].classList.remove('active');
+        }
+        
+        currentSlide = (index + slides.length) % slides.length;
+        
+        slides[currentSlide].classList.add('active');
+        if (indicators.length > 0) {
+            indicators[currentSlide].classList.add('active');
+        }
+    }
+
+    function nextSlide() {
+        showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+        showSlide(currentSlide - 1);
+    }
+
+    function startSlideShow() {
+        slideInterval = setInterval(nextSlide, intervalTime);
+    }
+
+    function resetSlideShow() {
+        clearInterval(slideInterval);
+        startSlideShow();
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            nextSlide();
+            resetSlideShow();
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            prevSlide();
+            resetSlideShow();
+        });
+    }
+
+    indicators.forEach(function(indicator, idx) {
+        indicator.addEventListener('click', function() {
+            showSlide(idx);
+            resetSlideShow();
+        });
+    });
+
+    startSlideShow();
+
+    // Lightbox Modal para visualização de imagem em tamanho maior
+    var lightbox = document.getElementById('imageLightbox');
+    var lightboxImg = document.getElementById('lightboxImage');
+    var lightboxCaption = document.getElementById('lightboxCaption');
+    var closeBtn = document.querySelector('.lightbox-close');
+
+    document.querySelectorAll('.evento-banner-img').forEach(function(img) {
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', function() {
+            if (lightbox && lightboxImg && lightboxCaption) {
+                lightbox.hidden = false;
+                lightboxImg.src = this.src;
+                lightboxCaption.textContent = this.alt || '';
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    });
+
+    if (closeBtn && lightbox) {
+        closeBtn.addEventListener('click', function() {
+            lightbox.hidden = true;
+            document.body.style.overflow = '';
+        });
+        lightbox.addEventListener('click', function(e) {
+            if (e.target === lightbox || e.target === closeBtn) {
+                lightbox.hidden = true;
+                document.body.style.overflow = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

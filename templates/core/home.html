@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Início - Minha Vitrine{% endblock %}
+
+{% block content %}
+<!-- Carrossel de Destaques -->
+{% if destaques %}
+<section class="vitrine-showcase">
+    <div class="container container-wide">
+        <div class="vitrine-header">
+            <h2 class="vitrine-title">{% if modo_eventos %}Eventos em Destaque{% else %}Vitrines em Destaque{% endif %}</h2>
+        </div>
+
+        <div class="vitrine-grid">
+            {% for item in destaques %}
+                {% if item.data_inicio %}
+                    <!-- Card de Evento em Destaque -->
+                    <article class="storefront-card storefront-card-evento">
+                        <div class="storefront-roof">
+                            <div class="storefront-sign">
+                                <span class="store-category">{{ item.get_tipo_display }}</span>
+                                <span class="store-name">{{ item.nome }}</span>
+                            </div>
+                            <div class="storefront-awning" style="background: repeating-linear-gradient(90deg, var(--accent) 0, var(--accent) 30px, #ffffff 30px, #ffffff 60px);"></div>
+                        </div>
+                        
+                        <a class="storefront-window-wrap" href="{% url 'evento_detalhe' item.id %}">
+                            <div class="storefront-window">
+                                {% if item.banner %}
+                                    <img src="{{ item.banner.url }}" alt="{{ item.nome }}" class="storefront-img">
+                                {% else %}
+                                    <div class="storefront-placeholder"><i class="fas fa-calendar-alt"></i></div>
+                                {% endif %}
+                                <div class="storefront-reflection"></div>
+                            </div>
+                        </a>
+                        
+                        <div class="storefront-base" style="background-color: #8c5a2b; border-top-color: #704214;">
+                            <a href="{% url 'evento_detalhe' item.id %}" class="storefront-btn">Ver Detalhes</a>
+                        </div>
+                    </article>
+                {% else %}
+                    <!-- Card de Estabelecimento em Destaque -->
+                    <article class="storefront-card">
+                        <div class="storefront-roof">
+                            <div class="storefront-sign">
+                                <span class="store-category">{{ item.categoria.nome }}</span>
+                                <span class="store-name">{{ item.nome }}</span>
+                            </div>
+                            <div class="storefront-awning"></div>
+                        </div>
+                        
+                        <a class="storefront-window-wrap" href="{% url 'estabelecimento_detalhe' item.id %}">
+                            <div class="storefront-window">
+                                {% if item.imagem_principal %}
+                                    <img src="{{ item.imagem_principal.url }}" alt="{{ item.nome }}" class="storefront-img">
+                                {% else %}
+                                    <div class="storefront-placeholder"><i class="fas fa-store"></i></div>
+                                {% endif %}
+                                <div class="storefront-reflection"></div>
+                            </div>
+                        </a>
+                        
+                        <div class="storefront-base">
+                            <a href="{% url 'estabelecimento_detalhe' item.id %}" class="storefront-btn">Visitar Loja</a>
+                        </div>
+                    </article>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% else %}
+<!-- Hero padrão quando não há destaques -->
+<div class="home-hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">Minha Vitrine</h1>
+            <p class="hero-subtitle">Descubra os melhores estabelecimentos e eventos da sua cidade</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if modo_eventos %}
+<!-- Eventos (categoria Eventos na home) -->
+<section class="establishments-section eventos-home-section">
+    <div class="container">
+        {% if eventos_lista %}
+            <div class="eventos-grid olx-cards">
+                {% for evento in eventos_lista %}
+                    <article class="evento-card {% if evento.esta_encerrado %}evento-card-encerrado{% endif %}">
+                        {% if evento.banner %}
+                            <img src="{{ evento.banner.url }}" alt="" class="evento-banner">
+                        {% else %}
+                            <div class="evento-banner-placeholder">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        {% endif %}
+                        <div class="evento-content">
+                            <span class="evento-tipo">{{ evento.get_tipo_display }}</span>
+                            {% if evento.esta_encerrado %}
+                                <h3 class="evento-nome">{{ evento.nome }}</h3>
+                                <p class="evento-encerrado-msg">Evento encerrado</p>
+                            {% else %}
+                                <h3 class="evento-nome">{{ evento.nome }}</h3>
+                                <p class="evento-descricao">{{ evento.descricao|truncatewords:28 }}</p>
+                                <div class="evento-info">
+                                    <span><i class="fas fa-calendar"></i> {{ evento.data_inicio|date:"d/m/Y" }}</span>
+                                    <span><i class="fas fa-clock"></i> {{ evento.hora_inicio|time:"H:i" }}</span>
+                                </div>
+                                <a href="{% url 'evento_detalhe' evento.id %}" class="btn-evento-detalhes">Ver detalhes</a>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-calendar-times"></i>
+                <h3>Nenhum evento encontrado</h3>
+                <p>Não há eventos cadastrados no momento.</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% else %}
+<!-- Fileiras por categoria (estilo Netflix) -->
+<section class="rows-section">
+    <div class="container container-wide">
+        {% if estabelecimentos_por_categoria %}
+            {% for row in estabelecimentos_por_categoria %}
+                <section class="row-block" aria-label="{{ row.categoria.nome }}">
+                    <div class="row-header">
+                        <h2 class="row-title">{{ row.categoria.nome }}</h2>
+                        <a class="row-see-all" href="?categoria={{ row.categoria.slug }}">Ver tudo</a>
+                    </div>
+
+                    <div class="row-scroller-wrap" data-row="{{ forloop.counter0 }}">
+                        <button class="row-nav row-nav-left" type="button" aria-label="Rolar para esquerda" data-row-nav="left">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+
+                        <div class="row-scroller" data-row-scroller>
+                            {% for estabelecimento in row.estabelecimentos %}
+                                <article class="tile-card">
+                                    <a href="{% url 'estabelecimento_detalhe' estabelecimento.id %}" class="tile-link">
+                                        <div class="tile-media">
+                                            {% if estabelecimento.imagem_principal %}
+                                                <img src="{{ estabelecimento.imagem_principal.url }}" alt="{{ estabelecimento.nome }}" loading="lazy">
+                                            {% else %}
+                                                <div class="tile-placeholder">
+                                                    <i class="fas fa-store"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div class="tile-glass"></div>
+                                        </div>
+                                        <div class="tile-meta">
+                                            <h3 class="tile-name">{{ estabelecimento.nome }}</h3>
+                                            <p class="tile-desc">{{ estabelecimento.descricao|truncatewords:14 }}</p>
+                                        </div>
+                                    </a>
+                                </article>
+                            {% endfor %}
+                        </div>
+
+                        <button class="row-nav row-nav-right" type="button" aria-label="Rolar para direita" data-row-nav="right">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </section>
+            {% endfor %}
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <h3>Nenhum estabelecimento encontrado</h3>
+                <p>Tente buscar em outra categoria</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Favorites Footer Button -->
+{% if user.is_authenticated %}
+    <div class="floating-favorites">
+        <a href="{% url 'meus_favoritos' %}" class="floating-btn">
+            <i class="fas fa-star"></i>
+            <span>Meus Favoritos</span>
+        </a>
+        <button type="button" class="floating-feedback-btn" id="openFeedbackModal" aria-haspopup="dialog">
+            <i class="fas fa-comment"></i>
+            <span>Enviar Feedback</span>
+        </button>
+    </div>
+
+    <div class="feedback-modal" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle" hidden>
+        <div class="feedback-modal-backdrop" id="feedbackModalBackdrop"></div>
+        <div class="feedback-modal-box">
+            <h2 id="feedbackModalTitle">Enviar feedback</h2>
+            <form method="post" action="{% url 'enviar_feedback' %}">
+                {% csrf_token %}
+                {{ feedback_form.mensagem }}
+                <div class="feedback-modal-actions">
+                    <button type="button" class="btn-secondary" id="closeFeedbackModal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function() {
+    var modal = document.getElementById('feedbackModal');
+    var openBtn = document.getElementById('openFeedbackModal');
+    var closeBtn = document.getElementById('closeFeedbackModal');
+    var backdrop = document.getElementById('feedbackModalBackdrop');
+    function openM() { if (modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; } }
+    function closeM() { if (modal) { modal.hidden = true; document.body.style.overflow = ''; } }
+    if (openBtn) openBtn.addEventListener('click', openM);
+    if (closeBtn) closeBtn.addEventListener('click', closeM);
+    if (backdrop) backdrop.addEventListener('click', closeM);
+})();
+
+function toggleFavorite(estabelecimentoId) {
+    {% if not user.is_authenticated %}
+        window.location.href = "{% url 'login' %}?next=" + window.location.pathname;
+        return;
+    {% endif %}
+    
+    fetch(`/estabelecimento/${estabelecimentoId}/favoritar/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.querySelector(`button[data-id="${estabelecimentoId}"]`);
+            if (data.is_favorito) {
+                btn.classList.add('favorited');
+                btn.querySelector('span').textContent = 'Favoritos';
+            } else {
+                btn.classList.remove('favorited');
+                btn.querySelector('span').textContent = 'Favoritar';
+            }
+        }
+    })
+    .catch(error => console.error('Erro:', error));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fileiras por categoria (scroll horizontal)
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.row-scroller-wrap').forEach((wrap) => {
+        const scroller = wrap.querySelector('[data-row-scroller]');
+        const btnL = wrap.querySelector('[data-row-nav="left"]');
+        const btnR = wrap.querySelector('[data-row-nav="right"]');
+        if (!scroller) return;
+
+        const step = () => Math.max(320, Math.floor(scroller.clientWidth * 0.9));
+
+        function updateBtns() {
+            if (!btnL || !btnR) return;
+            const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+            const centered = scroller.scrollWidth <= scroller.clientWidth + 2;
+            scroller.classList.toggle('is-centered', centered);
+
+            btnL.disabled = centered || scroller.scrollLeft <= 4;
+            btnR.disabled = centered || scroller.scrollLeft >= maxScroll - 4;
+        }
+
+        if (btnL) btnL.addEventListener('click', () => scroller.scrollBy({ left: -step(), behavior: 'smooth' }));
+        if (btnR) btnR.addEventListener('click', () => scroller.scrollBy({ left: step(), behavior: 'smooth' }));
+
+        scroller.addEventListener('scroll', updateBtns);
+        window.addEventListener('resize', updateBtns);
+        updateBtns();
+    });
+});
+
+// Cortina individual por vitrine (mostra 1x por aba)
+document.addEventListener('DOMContentLoaded', function() {
+    const curtains = document.querySelectorAll('.storefront-curtain');
+    if (!curtains.length) return;
+
+    curtains.forEach(function(curtain) {
+        const id = curtain.getAttribute('data-curtain-id');
+        if (!id) return;
+        const key = 'vitrineCurtainSeen_' + id;
+
+        if (sessionStorage.getItem(key) === '1') {
+            curtain.hidden = true;
+            return;
+        }
+
+        curtain.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            curtain.classList.add('is-opening');
+            sessionStorage.setItem(key, '1');
+
+            setTimeout(function() {
+                curtain.hidden = true;
+            }, 700);
+        });
+    });
+});
+
+</script>
+{% endblock %}
+

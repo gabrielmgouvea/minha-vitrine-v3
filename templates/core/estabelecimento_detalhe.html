@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ estabelecimento.nome }} - Minha Vitrine{% endblock %}
+
+{% block content %}
+<div class="detalhes-page">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="breadcrumb">
+            <a href="{% url 'home' %}"><i class="fas fa-home"></i> Início</a>
+            <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+            <a href="{% url 'home' %}?categoria={{ estabelecimento.categoria.slug }}">{{ estabelecimento.categoria.nome }}</a>
+            <span class="breadcrumb-sep"><i class="fas fa-chevron-right"></i></span>
+            <span class="breadcrumb-current">{{ estabelecimento.nome }}</span>
+        </nav>
+
+        <div class="detalhes-grid">
+            <!-- Imagens -->
+            <div class="detalhes-images">
+                <div class="main-image">
+                    {% if estabelecimento.imagem_principal %}
+                        <img src="{{ estabelecimento.imagem_principal.url }}" alt="{{ estabelecimento.nome }}" id="mainImage">
+                    {% else %}
+                        <div class="image-placeholder">
+                            <i class="fas fa-store"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                {% if estabelecimento.fotos.all %}
+                    <div class="thumbnail-images">
+                        {% for foto in estabelecimento.fotos.all %}
+                            <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda }}" 
+                                 class="thumbnail" onclick="changeMainImage('{{ foto.imagem.url }}')">
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Informações -->
+            <div class="detalhes-info">
+                <div class="info-header">
+                    <div>
+                        <span class="categoria-badge">{{ estabelecimento.categoria.nome }}</span>
+                        <h1>{{ estabelecimento.nome }}</h1>
+                    </div>
+                    
+                    <button class="favorite-btn-large {% if is_favorito %}favorited{% endif %}" 
+                            onclick="toggleFavorite({{ estabelecimento.id }})">
+                        <i class="fas fa-star"></i>
+                    </button>
+                </div>
+                
+                {% if avaliacoes %}
+                    <div class="rating-overview">
+                        <div class="rating-number">{{ media_avaliacoes }}</div>
+                        <div class="rating-stars">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= media_avaliacoes %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <span class="rating-count">({{ avaliacoes.count }} avaliações)</span>
+                    </div>
+                {% endif %}
+                
+                <div class="info-section">
+                    <h3><i class="fas fa-info-circle"></i> Descrição</h3>
+                    <p>{{ estabelecimento.descricao }}</p>
+                </div>
+                
+                <div class="info-section">
+                    <h3><i class="fas fa-map-marker-alt"></i> Endereço</h3>
+                    <p>{{ estabelecimento.endereco }}{% if estabelecimento.numero %}, {{ estabelecimento.numero }}{% endif %}</p>
+                    {% if estabelecimento.complemento %}
+                        <p>{{ estabelecimento.complemento }}</p>
+                    {% endif %}
+                    {% if estabelecimento.cep %}
+                        <p>CEP: {{ estabelecimento.cep }}</p>
+                    {% endif %}
+                    
+                    <a href="{{ estabelecimento.get_google_maps_url }}" target="_blank" class="btn-google-maps">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Ver no Google Maps
+                    </a>
+                </div>
+                
+                {% if estabelecimento.horario_funcionamento %}
+                    <div class="info-section">
+                        <h3><i class="far fa-clock"></i> Horário de Funcionamento</h3>
+                        <p style="white-space: pre-line;">{{ estabelecimento.horario_funcionamento }}</p>
+                    </div>
+                {% endif %}
+                
+                <div class="info-section">
+                    <h3><i class="fas fa-address-book"></i> Contato</h3>
+                    <div class="contact-info">
+                        {% if estabelecimento.telefone %}
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <a href="tel:{{ estabelecimento.telefone }}">{{ estabelecimento.telefone }}</a>
+                            </div>
+                        {% endif %}
+                        
+                        {% if estabelecimento.whatsapp %}
+                            <div class="contact-item">
+                                <i class="fab fa-whatsapp"></i>
+                                <a href="https://wa.me/{{ estabelecimento.whatsapp }}" target="_blank">{{ estabelecimento.whatsapp }}</a>
+                            </div>
+                        {% endif %}
+                        
+                        {% if estabelecimento.email %}
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <a href="mailto:{{ estabelecimento.email }}">{{ estabelecimento.email }}</a>
+                            </div>
+                        {% endif %}
+                        
+                        {% if estabelecimento.website %}
+                            <div class="contact-item">
+                                <i class="fas fa-globe"></i>
+                                <a href="{{ estabelecimento.website }}" target="_blank">{{ estabelecimento.website }}</a>
+                            </div>
+                        {% endif %}
+                        
+                        {% if estabelecimento.instagram %}
+                            <div class="contact-item">
+                                <i class="fab fa-instagram"></i>
+                                <a href="https://instagram.com/{{ estabelecimento.instagram }}" target="_blank">@{{ estabelecimento.instagram }}</a>
+                            </div>
+                        {% endif %}
+                        
+                        {% if estabelecimento.facebook %}
+                            <div class="contact-item">
+                                <i class="fab fa-facebook"></i>
+                                <a href="{{ estabelecimento.facebook }}" target="_blank">Facebook</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Avaliações -->
+        <div class="avaliacoes-container">
+            <h2>Avaliações</h2>
+            
+            {% if user.is_authenticated and avaliacao_form %}
+                <div class="nova-avaliacao" id="form-avaliacao-container" {% if usuario_ja_avaliou %}style="display: none;"{% endif %}>
+                    <h3>{% if usuario_ja_avaliou %}Atualizar sua avaliação{% else %}Deixe sua avaliação{% endif %}</h3>
+                    <form method="post" action="{% url 'avaliar_estabelecimento' estabelecimento.id %}" class="avaliacao-form">
+                        {% csrf_token %}
+                        
+                        <div class="star-rating-input">
+                            <label>Sua nota:</label>
+                            <div class="stars-input">
+                                {% for i in "54321" %}
+                                    <input type="radio" name="estrelas" id="star{{ i }}" value="{{ i }}" required {% if avaliacao_form.instance.estrelas|stringformat:"s" == i %}checked{% endif %}>
+                                    <label for="star{{ i }}"><i class="fas fa-star"></i></label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="id_comentario">Seu comentário:</label>
+                            {{ avaliacao_form.comentario }}
+                        </div>
+                        
+                        <button type="submit" class="btn-submit-avaliacao">{% if usuario_ja_avaliou %}Salvar Alterações{% else %}Enviar Avaliação{% endif %}</button>
+                    </form>
+                </div>
+            {% endif %}
+            
+            <div class="avaliacoes-list">
+                {% if avaliacoes %}
+                    {% for avaliacao in avaliacoes %}
+                        <div class="avaliacao-item">
+                            <div class="avaliacao-header">
+                                <div class="avaliacao-user">
+                                    <div class="user-avatar">
+                                        {% if avaliacao.usuario.profile.avatar %}
+                                            <img src="{{ avaliacao.usuario.profile.avatar.url }}" alt="{{ avaliacao.usuario.first_name }}">
+                                        {% else %}
+                                            <i class="fas fa-user-circle"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="avaliacao-user-info">
+                                            <strong>{{ avaliacao.usuario.first_name|default:avaliacao.usuario.username }}</strong>
+                                            {% if avaliacao.usuario.is_superuser %}
+                                                <span class="badge-admin"><i class="fas fa-shield-alt"></i> Admin</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="avaliacao-stars">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= avaliacao.estrelas %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="avaliacao-meta">
+                                    <span class="avaliacao-data">{{ avaliacao.criado_em|date:"d/m/Y" }}</span>
+                                    {% if avaliacao.editada %}
+                                        <span class="badge-edited"><i class="fas fa-pencil-alt"></i> Editada</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if avaliacao.comentario %}
+                                <p class="avaliacao-comentario">{{ avaliacao.comentario }}</p>
+                            {% endif %}
+                            
+                            <!-- Botoes de Acao da Avaliacao -->
+                            <div class="avaliacao-actions">
+                                {% if request.user.is_authenticated and request.user != avaliacao.usuario %}
+                                    <button class="btn-vote {% if request.user in avaliacao.votos_uteis.all %}active-vote{% endif %}" data-id="{{ avaliacao.id }}" data-type="util" onclick="votarAvaliacao(this)">
+                                        <i class="fas fa-thumbs-up"></i> Útil (<span class="votos-util">{{ avaliacao.votos_uteis.count }}</span>)
+                                    </button>
+                                    <button class="btn-vote {% if request.user in avaliacao.votos_inuteis.all %}active-vote{% endif %}" data-id="{{ avaliacao.id }}" data-type="inutil" onclick="votarAvaliacao(this)">
+                                        <i class="fas fa-thumbs-down"></i> Não útil (<span class="votos-inutil">{{ avaliacao.votos_inuteis.count }}</span>)
+                                    </button>
+                                {% else %}
+                                    <span class="votos-stats" style="color: var(--text-muted); font-size: 0.85rem;">
+                                        {{ avaliacao.votos_uteis.count }} pessoas acharam isso útil
+                                    </span>
+                                {% endif %}
+                                
+                                {% if request.user == avaliacao.usuario %}
+                                    <button class="btn-edit" onclick="mostrarFormEdicao()" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.9rem; font-weight: 600;">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                {% endif %}
+                                
+                                {% if request.user.is_superuser %}
+                                    <form method="post" action="{% url 'remover_avaliacao' avaliacao.id %}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja remover esta avaliação?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-remove" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 0.9rem; font-weight: 600;">
+                                            <i class="fas fa-trash"></i> Remover
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-avaliacoes">Nenhuma avaliação ainda. Seja o primeiro a avaliar!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avaliacao-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--border);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-vote {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-vote:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+}
+
+.btn-vote.active-vote {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function mostrarFormEdicao() {
+    const formContainer = document.getElementById('form-avaliacao-container');
+    if (formContainer) {
+        formContainer.style.display = 'block';
+        formContainer.scrollIntoView({behavior: 'smooth'});
+    }
+}
+
+function changeMainImage(imageUrl) {
+    document.getElementById('mainImage').src = imageUrl;
+}
+
+function votarAvaliacao(btn) {
+    const id = btn.getAttribute('data-id');
+    const type = btn.getAttribute('data-type');
+    
+    fetch(`/avaliacao/${id}/votar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({voto: type})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            const container = btn.closest('.avaliacao-actions');
+            const utilSpan = container.querySelector('.votos-util');
+            const inutilSpan = container.querySelector('.votos-inutil');
+            const btnUtil = container.querySelector('[data-type="util"]');
+            const btnInutil = container.querySelector('[data-type="inutil"]');
+            
+            utilSpan.textContent = data.votos_uteis;
+            inutilSpan.textContent = data.votos_inuteis;
+            
+            if (data.tipo === 'util') {
+                if (data.ativo) {
+                    btnUtil.classList.add('active-vote');
+                    btnInutil.classList.remove('active-vote');
+                } else {
+                    btnUtil.classList.remove('active-vote');
+                }
+            } else {
+                if (data.ativo) {
+                    btnInutil.classList.add('active-vote');
+                    btnUtil.classList.remove('active-vote');
+                } else {
+                    btnInutil.classList.remove('active-vote');
+                }
+            }
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(e => console.error(e));
+}
+
+function toggleFavorite(estabelecimentoId) {
+    {% if not user.is_authenticated %}
+        window.location.href = "{% url 'login' %}?next=" + window.location.pathname;
+        return;
+    {% endif %}
+    
+    fetch(`/estabelecimento/${estabelecimentoId}/favoritar/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.querySelector('.favorite-btn-large');
+            if (data.is_favorito) {
+                btn.classList.add('favorited');
+            } else {
+                btn.classList.remove('favorited');
+            }
+        }
+    })
+    .catch(error => console.error('Erro:', error));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

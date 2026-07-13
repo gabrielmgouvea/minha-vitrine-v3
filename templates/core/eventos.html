@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Eventos - Minha Vitrine{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>Eventos</h1>
+        <p>Descubra os melhores eventos da sua cidade</p>
+    </div>
+</div>
+
+<section class="eventos-section">
+    <div class="container">
+        <!-- Filtros de tipo -->
+        <div class="filter-tabs">
+            <a href="{% url 'eventos' %}" class="filter-tab {% if not tipo_selecionado %}active{% endif %}">
+                Todos
+            </a>
+            {% for tipo_id, tipo_nome in tipos %}
+                <a href="?tipo={{ tipo_id }}" class="filter-tab {% if tipo_selecionado == tipo_id %}active{% endif %}">
+                    {{ tipo_nome }}
+                </a>
+            {% endfor %}
+        </div>
+        
+        <!-- Lista de eventos -->
+        {% if eventos %}
+            <div class="eventos-grid">
+                {% for evento in eventos %}
+                    <div class="evento-card {% if evento.esta_encerrado %}evento-card-encerrado evento-card-lista-encerrado{% endif %}">
+                        {% if evento.banner %}
+                            <img src="{{ evento.banner.url }}" alt="{{ evento.nome }}" class="evento-banner">
+                        {% else %}
+                            <div class="evento-banner-placeholder">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="evento-content">
+                            <span class="evento-tipo">{{ evento.get_tipo_display }}</span>
+                            <h3 class="evento-nome">{{ evento.nome }}</h3>
+                            {% if evento.esta_encerrado %}
+                                <p class="evento-encerrado-msg">Evento encerrado — o link de detalhes ficará indisponível até a remoção automática (24h após o fim).</p>
+                            {% else %}
+                                <p class="evento-descricao">{{ evento.descricao|truncatewords:30 }}</p>
+                            {% endif %}
+                            
+                            <div class="evento-info">
+                                <div class="info-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>{{ evento.data_inicio|date:"d/m/Y" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>{{ evento.hora_inicio|time:"H:i" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ evento.localizacao|truncatewords:5 }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if not evento.esta_encerrado %}
+                            <a href="{% url 'evento_detalhe' evento.id %}" class="btn-evento-detalhes">
+                                Ver Detalhes <i class="fas fa-arrow-right"></i>
+                            </a>
+                            {% else %}
+                            <span class="btn-evento-detalhes btn-evento-detalhes-disabled">Indisponível</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-calendar-times"></i>
+                <h3>Nenhum evento encontrado</h3>
+                <p>Não há eventos cadastrados no momento</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+

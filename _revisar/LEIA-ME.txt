@@ -1,0 +1,36 @@
+Pasta _revisar — arquivos movidos para você decidir o que fazer
+================================================================
+
+Estes arquivos NÃO são usados pelo projeto em execução. Revise e delete
+o que não precisar, ou mova de volta se quiser reutilizar.
+
+Conteúdo
+--------
+
+templates/base-duplicado.html
+  Cópia antiga de templates/base.html (pasta "Nova pasta"). O site usa
+  apenas templates/base.html na raiz do projeto.
+
+static/css/gugudada.css.backup
+  Backup de um tema CSS antigo (~1700 linhas). Não referenciado em lugar
+  nenhum.
+
+cursor_projeto_de_vitrine_virtual_em_dj.md
+  Export de conversa do Cursor (~8300 linhas). Histórico de desenvolvimento,
+  não é documentação do projeto.
+
+ARQUIVOS_CRIADOS.md
+  Inventário antigo de arquivos com caminhos desatualizados.
+
+exec.py
+  Script avulso para marcar usuário como DEV (placeholder SEU_USERNAME).
+  Use o shell do Django conforme docs/INICIO_RAPIDO.md.
+
+Observação sobre venv/
+----------------------
+A pasta venv/ na raiz do projeto é o ambiente virtual local. Ela não
+deve ir para o Git. Se quiser limpar, delete venv/ e recrie:
+
+  python -m venv venv
+  venv\Scripts\activate
+  pip install -r requirements.txt

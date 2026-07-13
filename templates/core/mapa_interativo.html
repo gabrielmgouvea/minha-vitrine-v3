@@ -1,0 +1,720 @@
+{% extends 'base.html' %}
+
+{% block title %}Mapa Interativo - Minha Vitrine{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ===== Mapa Page ===== */
+.mapa-page {
+    background: var(--bg-base);
+    color: var(--text-primary);
+}
+
+.mapa-header {
+    background: var(--bg-surface);
+    padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.mapa-header h1 {
+    font-size: 1.6rem;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mapa-header h1 i { color: var(--primary); }
+
+.mapa-filtro-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Status GPS */
+.gps-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.gps-buscando { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+.gps-ativo    { background: rgba(34,197,94,0.12);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.gps-negado   { background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* Filtro */
+.mapa-filtro { display: flex; align-items: center; gap: 0.6rem; }
+.mapa-filtro label { font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; }
+
+.filtro-select {
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    min-width: 190px;
+}
+
+.filtro-select:focus { outline: none; border-color: var(--primary); }
+
+/* Aviso */
+.aviso-coordenadas {
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.4);
+    border-radius: 8px;
+    padding: 0.85rem 1.5rem;
+    margin: 0.75rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--warning);
+    font-size: 0.9rem;
+}
+
+.aviso-coordenadas i { font-size: 1.2rem; flex-shrink: 0; }
+.aviso-coordenadas a { color: var(--warning); text-decoration: underline; font-weight: 600; }
+
+/* Layout */
+.mapa-container {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: calc(100vh - 64px - 72px);
+}
+
+/* Sidebar */
+.estabelecimento-sidebar {
+    background: var(--bg-base);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 0.75rem;
+}
+
+.sidebar-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.sidebar-card:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,0.25); transform: translateY(-2px); }
+.sidebar-card.active { border-color: var(--primary); background: var(--bg-elevated); box-shadow: 0 0 0 2px var(--primary-glow); }
+
+.sidebar-image { width: 100%; height: 140px; object-fit: cover; }
+
+.sidebar-image-placeholder {
+    width: 100%; height: 140px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--bg-elevated) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: white;
+}
+
+.sidebar-content { padding: 0.9rem 1rem; }
+
+.sidebar-name-row {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem;
+}
+
+.sidebar-name-row h3 { font-size: 1.05rem; margin: 0; color: var(--text-primary); line-height: 1.3; }
+
+.sidebar-cat-badge {
+    font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.05em; background: var(--primary-light);
+    color: var(--primary); padding: 0.2rem 0.5rem;
+    border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+}
+
+.sidebar-info { margin-bottom: 0.6rem; }
+
+.info-row {
+    display: flex; align-items: flex-start;
+    gap: 0.5rem; margin-bottom: 0.35rem;
+    font-size: 0.82rem; color: var(--text-secondary);
+}
+
+.info-row i { color: var(--primary); width: 14px; margin-top: 2px; flex-shrink: 0; }
+
+/* Distância */
+.distancia-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--primary-light); color: var(--primary);
+    border: 1px solid rgba(34,199,167,0.25);
+    border-radius: 8px; padding: 0.35rem 0.65rem;
+    font-size: 0.8rem; font-weight: 700; margin-bottom: 0.55rem;
+}
+
+.sidebar-descricao {
+    margin-bottom: 0.6rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Avaliações */
+.sidebar-avaliacoes {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.65rem;
+}
+
+.avaliacao-numero { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.stars { display: flex; gap: 0.15rem; }
+.stars i { color: var(--star); font-size: 0.85rem; }
+.avaliacao-label { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+
+/* Botões */
+.sidebar-btn-ver {
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    padding: 0.5rem; background: var(--primary); color: #fff !important;
+    border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+    text-decoration: none; transition: all var(--transition); width: 100%; margin-bottom: 0.4rem;
+}
+
+.sidebar-btn-ver:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+.btn-open-maps {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.45rem 0.75rem; background: #4285F4; color: white !important;
+    border-radius: 6px; text-decoration: none; font-size: 0.8rem;
+    font-weight: 600; transition: all 0.25s ease; width: 100%;
+    justify-content: center; margin-top: 0.25rem;
+}
+
+.btn-open-maps:hover { background: #3367D6; transform: translateY(-1px); }
+
+/* Mapa Leaflet */
+.mapa-view { position: relative; }
+#map { width: 100%; height: 100%; }
+
+.empty-map {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 1.25rem;
+    color: var(--text-muted); text-align: center; padding: 2rem; gap: 0.75rem;
+}
+
+.empty-map i { font-size: 3rem; color: var(--primary); opacity: 0.5; }
+
+.no-results-sidebar {
+    text-align: center; padding: 3rem 1rem; color: var(--text-muted);
+    display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+}
+
+.no-results-sidebar i { font-size: 2.5rem; opacity: 0.4; }
+
+/* Botão "Minha Localização" — controle customizado dentro do mapa */
+.leaflet-control-minha-loc a {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--primary) !important;
+    font-weight: 900;
+    background: var(--bg-surface) !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 8px !important;
+    width: 36px !important;
+    height: 36px !important;
+    transition: all 0.2s ease;
+}
+
+.leaflet-control-minha-loc a:hover {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border-color: var(--primary) !important;
+}
+
+/* Pulsação do marcador do usuário */
+.user-location-icon {
+    width: 16px !important;
+    height: 16px !important;
+    background: #3b82f6;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(59,130,246,0.5);
+    animation: pulse-location 2s infinite;
+}
+
+@keyframes pulse-location {
+    0%   { box-shadow: 0 0 0 0   rgba(59,130,246,0.5); }
+    70%  { box-shadow: 0 0 0 14px rgba(59,130,246,0);   }
+    100% { box-shadow: 0 0 0 0   rgba(59,130,246,0);    }
+}
+
+/* Popup Leaflet customizado */
+.leaflet-popup-content-wrapper {
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.leaflet-popup-tip { background: var(--bg-surface) !important; }
+
+.popup-nome { font-weight: 800; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem; }
+.popup-end  { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+.popup-dist { font-size: 0.78rem; color: var(--primary); font-weight: 700; }
+
+/* Linha de rota */
+.rota-polyline { stroke: var(--primary); }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .mapa-container { grid-template-columns: 1fr; display: flex; flex-direction: column-reverse; height: auto; }
+    .mapa-view { height: 380px; width: 100%; }
+    .estabelecimento-sidebar { max-height: 500px; overflow-y: auto; }
+    .mapa-header { padding: 1rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mapa-page">
+    <div class="mapa-header">
+        <h1><i class="fas fa-map-marked-alt"></i>Mapa Interativo</h1>
+        
+        <div class="mapa-filtro-group">
+            <div id="gpsStatus" class="gps-status gps-buscando">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Obtendo localização...</span>
+            </div>
+            <div class="mapa-filtro">
+                <label for="filtroCategoria">Filtro</label>
+                <select id="filtroCategoria" class="filtro-select" onchange="filtrarPorCategoria(this.value)">
+                    <option value="">Todas as categorias</option>
+                    {% for categoria in categorias %}
+                        <option value="{{ categoria.slug }}" {% if categoria_filtro == categoria.slug %}selected{% endif %}>
+                            {{ categoria.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {% if total_sem_coordenadas > 0 %}
+    <div class="aviso-coordenadas">
+        <i class="fas fa-info-circle"></i>
+        <span>
+            <strong>Atenção:</strong> {{ total_sem_coordenadas }} estabelecimento{{ total_sem_coordenadas|pluralize }}
+            não aparece{{ total_sem_coordenadas|pluralize:"m" }} no mapa por não ter{{ total_sem_coordenadas|pluralize:"em" }} coordenadas GPS cadastradas.
+            {% if user.is_authenticated and user.is_superuser %}
+                <a href="{% url 'admin:core_estabelecimento_changelist' %}">Cadastre as coordenadas no admin</a>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    <div class="mapa-container">
+        <div class="estabelecimento-sidebar">
+            {% if pontos %}
+                {% for item in pontos %}
+                <div class="sidebar-card" data-id="{{ item.id }}" data-tipo="{% if item.data_inicio %}evento{% else %}estabelecimento{% endif %}" onclick="focusOnMarker({{ item.id }}, '{% if item.data_inicio %}evento{% else %}estabelecimento{% endif %}')">
+                    {% if item.data_inicio %}
+                        <!-- Card de Evento -->
+                        {% if item.banner %}
+                            <img src="{{ item.banner.url }}" alt="{{ item.nome }}" class="sidebar-image">
+                        {% else %}
+                            <div class="sidebar-image-placeholder" style="background: linear-gradient(135deg, var(--accent) 0%, var(--bg-elevated) 100%);"><i class="fas fa-calendar-alt" style="color: #3b2818;"></i></div>
+                        {% endif %}
+
+                        <div class="sidebar-content">
+                            <div class="sidebar-name-row">
+                                <h3>{{ item.nome }}</h3>
+                                <span class="sidebar-cat-badge" style="background: rgba(246,193,119,0.16); color: var(--accent);">Evento</span>
+                            </div>
+
+                            <div class="sidebar-info">
+                                <div class="info-row"><i class="fas fa-map-marker-alt"></i><span>{{ item.localizacao }}</span></div>
+                                <div class="info-row"><i class="far fa-clock"></i><span>Início: {{ item.data_inicio|date:"d/m/Y" }} às {{ item.hora_inicio|time:"H:i" }}</span></div>
+                                <div class="info-row"><i class="fas fa-tag"></i><span>{{ item.get_tipo_display }}</span></div>
+                            </div>
+
+                            <div class="distancia-badge" id="dist-evento-{{ item.id }}" style="display:none;">
+                                <i class="fas fa-route"></i>
+                                <span class="distancia-valor"></span>
+                            </div>
+
+                            {% if item.descricao %}
+                            <div class="sidebar-descricao"><p>{{ item.descricao }}</p></div>
+                            {% endif %}
+
+                            <a href="{% url 'evento_detalhe' item.id %}" class="sidebar-btn-ver" style="background-color: var(--accent); color: #3b2818 !important;" onclick="event.stopPropagation()">
+                                <i class="fas fa-calendar-day"></i> Ver Detalhes
+                            </a>
+                            {% if item.latitude and item.longitude %}
+                            <a href="https://www.google.com/maps?q={{ item.latitude|stringformat:'f' }},{{ item.longitude|stringformat:'f' }}"
+                               target="_blank" class="btn-open-maps" onclick="event.stopPropagation();">
+                                <i class="fas fa-external-link-alt"></i> Abrir no Google Maps
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <!-- Card de Estabelecimento -->
+                        {% if item.imagem_principal %}
+                            <img src="{{ item.imagem_principal.url }}" alt="{{ item.nome }}" class="sidebar-image">
+                        {% else %}
+                            <div class="sidebar-image-placeholder"><i class="fas fa-store"></i></div>
+                        {% endif %}
+
+                        <div class="sidebar-content">
+                            <div class="sidebar-name-row">
+                                <h3>{{ item.nome }}</h3>
+                                {% if item.categoria %}
+                                    <span class="sidebar-cat-badge">{{ item.categoria.nome }}</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="sidebar-info">
+                                <div class="info-row"><i class="fas fa-map-marker-alt"></i><span>{{ item.endereco }}</span></div>
+                                <div class="info-row"><i class="far fa-clock"></i><span>{{ item.horario_funcionamento|default:"Consultar horário" }}</span></div>
+                                {% if item.instagram %}
+                                <div class="info-row"><i class="fab fa-instagram"></i><span>{{ item.instagram }}</span></div>
+                                {% endif %}
+                            </div>
+
+                            <div class="distancia-badge" id="dist-estabelecimento-{{ item.id }}" style="display:none;">
+                                <i class="fas fa-route"></i>
+                                <span class="distancia-valor"></span>
+                            </div>
+
+                            {% if item.descricao %}
+                            <div class="sidebar-descricao"><p>{{ item.descricao }}</p></div>
+                            {% endif %}
+
+                            {% if item.media_avaliacoes %}
+                            <div class="sidebar-avaliacoes">
+                                <span class="avaliacao-numero">{{ item.media_avaliacoes|floatformat:1 }}</span>
+                                <div class="stars">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= item.media_avaliacoes %}<i class="fas fa-star"></i>
+                                        {% else %}<i class="far fa-star"></i>{% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="avaliacao-label">Avaliações</span>
+                            </div>
+                            {% endif %}
+
+                            <a href="{% url 'estabelecimento_detalhe' item.id %}" class="sidebar-btn-ver" onclick="event.stopPropagation()">
+                                <i class="fas fa-store"></i> Ver Loja
+                            </a>
+                            {% if item.latitude and item.longitude %}
+                            <a href="https://www.google.com/maps?q={{ item.latitude|stringformat:'f' }},{{ item.longitude|stringformat:'f' }}"
+                               target="_blank" class="btn-open-maps" onclick="event.stopPropagation();">
+                                <i class="fas fa-external-link-alt"></i> Abrir no Google Maps
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="no-results-sidebar">
+                <i class="fas fa-map-marked-alt"></i>
+                <p>Nenhum local encontrado</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mapa-view">
+            <div id="map"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const pontos = {{ pontos_json|safe }};
+
+let map, userMarker, rotaLayer;
+let userLat = null, userLng = null;
+let gpsAtivo = false;
+let storeMarkers = {};
+
+// ===== Haversine =====
+function calcularDistancia(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`;
+}
+
+// ===== GPS Status =====
+function setGpsStatus(estado) {
+    const el = document.getElementById('gpsStatus');
+    if (!el) return;
+    const configs = {
+        buscando: { cls: 'gps-buscando', html: '<i class="fas fa-spinner fa-spin"></i><span>Obtendo localização...</span>' },
+        ativo:    { cls: 'gps-ativo',    html: '<i class="fas fa-circle" style="font-size:.6rem;"></i><span>Localização ativa</span>' },
+        negado:   { cls: 'gps-negado',   html: '<i class="fas fa-location-slash"></i><span>Localização desativada</span>' },
+    };
+    const c = configs[estado];
+    el.className = `gps-status ${c.cls}`;
+    el.innerHTML = c.html;
+}
+
+// ===== Atualizar distâncias =====
+function atualizarDistancias() {
+    if (!gpsAtivo) return;
+    pontos.forEach(ponto => {
+        if (!ponto.latitude || !ponto.longitude) return;
+        const badge = document.getElementById(`dist-${ponto.tipo_ponto}-${ponto.id}`);
+        if (!badge) return;
+        const dist = calcularDistancia(userLat, userLng, parseFloat(ponto.latitude), parseFloat(ponto.longitude));
+        badge.querySelector('.distancia-valor').textContent = dist;
+        badge.style.display = 'inline-flex';
+        // Atualizar popup do marcador se existir
+        const markerKey = `${ponto.tipo_ponto}-${ponto.id}`;
+        const m = storeMarkers[markerKey];
+        if (m) {
+            const popup = m.getPopup();
+            if (popup) {
+                const el = popup.getElement();
+                if (el) {
+                    const distEl = el.querySelector('.popup-dist');
+                    if (distEl) distEl.textContent = `📍 ${dist} de você`;
+                }
+            }
+        }
+    });
+}
+
+// ===== Remover rota anterior =====
+function limparRota() {
+    if (rotaLayer) { map.removeLayer(rotaLayer); rotaLayer = null; }
+}
+
+// ===== Desenhar rota via OSRM (gratuito, sem API key) =====
+function desenharRota(destLat, destLng) {
+    if (!gpsAtivo || !userLat || !userLng) return;
+    limparRota();
+
+    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                rotaLayer = L.polyline(coords, {
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#22c7a7',
+                    weight: 4,
+                    opacity: 0.85,
+                    dashArray: null,
+                    lineJoin: 'round'
+                }).addTo(map);
+                map.fitBounds(rotaLayer.getBounds(), { padding: [40, 40] });
+            }
+        })
+        .catch(() => {
+            // Fallback: linha direta sem rota
+            rotaLayer = L.polyline([[userLat, userLng], [destLat, destLng]], {
+                color: '#22c7a7', weight: 3, opacity: 0.7, dashArray: '8,6'
+            }).addTo(map);
+            map.fitBounds(rotaLayer.getBounds(), { padding: [40, 40] });
+        });
+}
+
+// ===== Focar em ponto (estabelecimento ou evento) =====
+function focusOnMarker(id, tipoPonto) {
+    const ponto = pontos.find(p => p.id === id && p.tipo_ponto === tipoPonto);
+    if (!ponto || !ponto.latitude || !ponto.longitude) return;
+
+    document.querySelectorAll('.sidebar-card').forEach(c => c.classList.remove('active'));
+    const card = document.querySelector(`.sidebar-card[data-id="${id}"][data-tipo="${tipoPonto}"]`);
+    if (card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+
+    const lat = parseFloat(ponto.latitude);
+    const lng = parseFloat(ponto.longitude);
+
+    map.flyTo([lat, lng], 16, { animate: true, duration: 1 });
+
+    const markerKey = `${tipoPonto}-${id}`;
+    const marker = storeMarkers[markerKey];
+    if (marker) marker.openPopup();
+
+    if (gpsAtivo) desenharRota(lat, lng);
+}
+
+function filtrarPorCategoria(categoria) {
+    window.location.href = categoria ? `?categoria=${categoria}` : '{% url "mapa_interativo" %}';
+}
+
+// ===== Inicializar Mapa Leaflet =====
+document.addEventListener('DOMContentLoaded', function () {
+    // Centro inicial: média dos pontos com coordenadas ou default
+    const comCoord = pontos.filter(p => p.latitude && p.longitude);
+    let initLat = -22.91, initLng = -42.47, initZoom = 13;
+    if (comCoord.length > 0) {
+        initLat = comCoord.reduce((s, p) => s + parseFloat(p.latitude), 0) / comCoord.length;
+        initLng = comCoord.reduce((s, p) => s + parseFloat(p.longitude), 0) / comCoord.length;
+    }
+
+    map = L.map('map', { zoomControl: false }).setView([initLat, initLng], initZoom);
+
+    // Tiles OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Controle de zoom (canto inferior direito)
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Botão "Minha Localização" customizado
+    const LocControl = L.Control.extend({
+        options: { position: 'bottomright' },
+        onAdd: function () {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-minha-loc');
+            div.innerHTML = '<a href="#" title="Minha localização" role="button"><i class="fas fa-location-arrow"></i></a>';
+            div.querySelector('a').addEventListener('click', function (e) {
+                e.preventDefault();
+                if (gpsAtivo && userLat) {
+                    limparRota();
+                    map.flyTo([userLat, userLng], 16, { animate: true, duration: 1 });
+                    if (userMarker) userMarker.openPopup();
+                }
+            });
+            return div;
+        }
+    });
+    new LocControl().addTo(map);
+
+    // Ícone customizado das lojas
+    const storeIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+            background: var(--primary, #22c7a7);
+            color: #fff;
+            width: 34px; height: 34px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 3px solid white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+        "><i class="fas fa-store" style="transform: rotate(45deg); font-size: 14px;"></i></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -36]
+    });
+
+    // Ícone customizado dos eventos
+    const eventIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+            background: var(--accent, #f6c177);
+            color: #3b2818;
+            width: 34px; height: 34px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 3px solid white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+        "><i class="fas fa-calendar-alt" style="transform: rotate(45deg); font-size: 14px;"></i></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -36]
+    });
+
+    // Adicionar marcadores no mapa
+    pontos.forEach(ponto => {
+        if (!ponto.latitude || !ponto.longitude) return;
+        const lat = parseFloat(ponto.latitude);
+        const lng = parseFloat(ponto.longitude);
+        const iconToUse = ponto.tipo_ponto === 'evento' ? eventIcon : storeIcon;
+
+        const marker = L.marker([lat, lng], { icon: iconToUse }).addTo(map);
+        marker.bindPopup(`
+            <div class="popup-nome">${ponto.nome}</div>
+            <div class="popup-end">${ponto.endereco || ''}</div>
+            <div class="popup-dist" id="popup-dist-${ponto.tipo_ponto}-${ponto.id}"></div>
+        `, { maxWidth: 220 });
+
+        marker.on('click', function () {
+            document.querySelectorAll('.sidebar-card').forEach(c => c.classList.remove('active'));
+            const card = document.querySelector(`.sidebar-card[data-id="${ponto.id}"][data-tipo="${ponto.tipo_ponto}"]`);
+            if (card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+            if (gpsAtivo) desenharRota(lat, lng);
+        });
+
+        const markerKey = `${ponto.tipo_ponto}-${ponto.id}`;
+        storeMarkers[markerKey] = marker;
+    });
+
+    // ===== GPS Automático Contínuo =====
+    if (!navigator.geolocation) {
+        setGpsStatus('negado');
+        return;
+    }
+
+    navigator.geolocation.watchPosition(
+        function (pos) {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            gpsAtivo = true;
+            setGpsStatus('ativo');
+
+            // Ícone do usuário (ponto azul pulsante)
+            const userIcon = L.divIcon({
+                className: 'user-location-icon',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+                popupAnchor: [0, -12]
+            });
+
+            if (!userMarker) {
+                userMarker = L.marker([userLat, userLng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                userMarker.bindPopup('<strong>📍 Você está aqui</strong>');
+                // Primeira vez: centralizar no usuário
+                map.flyTo([userLat, userLng], 14, { animate: true, duration: 1.5 });
+            } else {
+                userMarker.setLatLng([userLat, userLng]);
+            }
+
+            atualizarDistancias();
+        },
+        function () {
+            gpsAtivo = false;
+            setGpsStatus('negado');
+        },
+        { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 }
+    );
+
+    // ===== Focar em evento via parâmetro URL ?evento=ID =====
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventoIdParam = urlParams.get('evento');
+    if (eventoIdParam) {
+        const eventoId = parseInt(eventoIdParam, 10);
+        // Aguarda marcadores estarem prontos e foca após breve delay
+        setTimeout(function() {
+            focusOnMarker(eventoId, 'evento');
+        }, 400);
+    } else {
+        // Ativar primeiro card visualmente
+        const firstCard = document.querySelector('.sidebar-card');
+        if (firstCard) firstCard.classList.add('active');
+    }
+});
+</script>
+{% endblock %}

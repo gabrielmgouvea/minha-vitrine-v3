@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Busca - Minha Vitrine{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1><i class="fas fa-search"></i> Resultados da Busca</h1>
+        {% if query %}
+            <p>Buscando por: <strong>"{{ query }}"</strong></p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="busca-page-content">
+    <div class="container">
+        <!-- Search Bar -->
+        <form action="{% url 'buscar' %}" method="get" class="search-bar-page">
+            <div class="search-input-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Buscar estabelecimentos..." class="search-input">
+            </div>
+            <button type="submit" class="search-btn">
+                <i class="fas fa-search"></i>
+                Buscar
+            </button>
+        </form>
+        
+        {% if estabelecimentos or eventos %}
+            {% with total_results=estabelecimentos.count|add:eventos.count %}
+                <p class="resultados-count">{{ total_results }} resultado{{ total_results|pluralize }} encontrado{{ total_results|pluralize }}</p>
+            {% endwith %}
+            
+            {% if estabelecimentos %}
+                <div class="section-title-busca" style="margin: 2rem 0 1rem; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-store" style="color: var(--primary);"></i> Estabelecimentos
+                </div>
+                <div class="establishments-grid">
+                    {% for estabelecimento in estabelecimentos %}
+                        <div class="establishment-card">
+                            <div class="card-image-wrapper">
+                                {% if estabelecimento.imagem_principal %}
+                                    <img src="{{ estabelecimento.imagem_principal.url }}" alt="{{ estabelecimento.nome }}" class="card-image">
+                                {% else %}
+                                    <div class="card-image-placeholder">
+                                        <i class="fas fa-store"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <button class="favorite-btn {% if user.is_authenticated and user in estabelecimento.favoritos.all %}favorited{% endif %}" 
+                                        data-id="{{ estabelecimento.id }}"
+                                        onclick="toggleFavorite({{ estabelecimento.id }})">
+                                    <i class="fas fa-star"></i>
+                                    {% if user.is_authenticated and user in estabelecimento.favoritos.all %}
+                                        <span>Favoritos</span>
+                                    {% else %}
+                                        <span>Favoritar</span>
+                                    {% endif %}
+                                </button>
+                            </div>
+                            
+                            <div class="card-content">
+                                <span class="card-category">{{ estabelecimento.categoria.nome }}</span>
+                                <h3 class="card-title">{{ estabelecimento.nome }}</h3>
+                                <p class="card-description">{{ estabelecimento.descricao|truncatewords:20 }}</p>
+                                
+                                {% if estabelecimento.media_avaliacoes %}
+                                    <div class="card-rating">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= estabelecimento.media_avaliacoes %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <span>({{ estabelecimento.total_avaliacoes }})</span>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="card-actions">
+                                    <a href="{% url 'estabelecimento_detalhe' estabelecimento.id %}" class="btn-view-details">
+                                        Ver Detalhes <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            {% if eventos %}
+                <div class="section-title-busca" style="margin: 3rem 0 1rem; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-calendar-alt" style="color: var(--accent);"></i> Eventos
+                </div>
+                <div class="eventos-grid olx-cards">
+                    {% for evento in eventos %}
+                        <article class="evento-card {% if evento.esta_encerrado %}evento-card-encerrado{% endif %}">
+                            {% if evento.banner %}
+                                <img src="{{ evento.banner.url }}" alt="" class="evento-banner">
+                            {% else %}
+                                <div class="evento-banner-placeholder">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                            {% endif %}
+                            <div class="evento-content">
+                                <span class="evento-tipo">{{ evento.get_tipo_display }}</span>
+                                {% if evento.esta_encerrado %}
+                                    <h3 class="evento-nome">{{ evento.nome }}</h3>
+                                    <p class="evento-encerrado-msg">Evento encerrado</p>
+                                {% else %}
+                                    <h3 class="evento-nome">{{ evento.nome }}</h3>
+                                    <p class="evento-descricao">{{ evento.descricao|truncatewords:28 }}</p>
+                                    <div class="evento-info">
+                                        <span><i class="fas fa-calendar"></i> {{ evento.data_inicio|date:"d/m/Y" }}</span>
+                                        <span><i class="fas fa-clock"></i> {{ evento.hora_inicio|time:"H:i" }}</span>
+                                    </div>
+                                    <a href="{% url 'evento_detalhe' evento.id %}" class="btn-evento-detalhes">Ver detalhes</a>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <h3>Nenhum resultado encontrado</h3>
+                <p>Tente buscar com outras palavras-chave</p>
+                <a href="{% url 'home' %}" class="btn-primary">Voltar ao Início</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFavorite(estabelecimentoId) {
+    {% if not user.is_authenticated %}
+        window.location.href = "{% url 'login' %}?next=" + window.location.pathname;
+        return;
+    {% endif %}
+    
+    fetch(`/estabelecimento/${estabelecimentoId}/favoritar/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.querySelector(`button[data-id="${estabelecimentoId}"]`);
+            if (data.is_favorito) {
+                btn.classList.add('favorited');
+                btn.querySelector('span').textContent = 'Favoritos';
+            } else {
+                btn.classList.remove('favorited');
+                btn.querySelector('span').textContent = 'Favoritar';
+            }
+        }
+    })
+    .catch(error => console.error('Erro:', error));
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

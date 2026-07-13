@@ -1,0 +1,252 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Minha Vitrine{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5.3">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/logo.png' %}">
+
+    <!-- Inline style to override light mode footer color and bypass browser cache -->
+    <style>
+        body.light-mode .footer {
+            background: #e5d5b7 !important;
+            border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+        body.light-mode .footer-section h4 {
+            color: #615033 !important;
+        }
+        body.light-mode .footer-section p,
+        body.light-mode .footer-section ul li a,
+        body.light-mode .footer-section p strong {
+            color: #4a3c25 !important;
+        }
+        body.light-mode .footer-section p i {
+            color: #1a9e87 !important;
+        }
+        body.light-mode .footer-section ul li a:hover {
+            color: #1a9e87 !important;
+        }
+        body.light-mode .footer-bottom {
+            color: #7d6b4f !important;
+            border-top-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        body.light-mode .social-links a {
+            background: rgba(0, 0, 0, 0.04) !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+            color: #4a3c25 !important;
+        }
+        body.light-mode .social-links a:hover {
+            background: #1a9e87 !important;
+            border-color: #1a9e87 !important;
+            color: #fff !important;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header/Navbar -->
+    <header class="navbar">
+        <div class="container navbar-content">
+            <div class="navbar-brand">
+                <a href="{% url 'home' %}" class="logo-link">
+                    <img src="{% static 'img/logo.png' %}" alt="Minha Vitrine" class="logo-img" style="height: 58px; width: auto; object-fit: contain; max-width: 200px;">
+                </a>
+            </div>
+            
+            <nav class="navbar-menu">
+                <a href="{% url 'home' %}" class="nav-link nav-link-home">Início</a>
+                {% if categorias %}
+                    <button type="button" class="nav-link nav-categories-btn" id="navCategoriesBtn" aria-haspopup="dialog" aria-expanded="false">
+                        Categorias
+                    </button>
+                {% endif %}
+
+                <!-- Busca (ícone que expande) -->
+                <form action="{% url 'buscar' %}" method="get" class="navbar-search nav-search-expand" role="search" style="position: relative;">
+                    <button type="button" class="nav-search-btn" id="navSearchBtn" aria-label="Abrir busca">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <input type="text" name="q" placeholder="Pesquisar" class="navbar-search-input nav-search-input live-search-input" id="navSearchInput" autocomplete="off">
+                    <div class="search-dropdown-results" style="display: none;"></div>
+                </form>
+                
+                <button type="button" class="theme-toggle" id="themeToggle" title="Modo noturno" aria-label="Alternar modo noturno">
+                    <i class="fas fa-moon" id="themeToggleIcon"></i>
+                </button>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'meus_favoritos' %}" class="nav-link">Meus Favoritos</a>
+                    <div class="nav-user">
+                        <button class="btn-user" id="userMenuBtn">
+                            <i class="fas fa-user-circle"></i>
+                            <span>{{ user.first_name|default:user.username }}</span>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            {% if user.is_superuser %}
+                                <a href="{% url 'ver_feedbacks' %}" class="dropdown-item">
+                                    <i class="fas fa-inbox"></i> Caixa de Sugestões
+                                    <span id="feedbackBadge" class="dropdown-badge" style="display:none;">!</span>
+                                </a>
+                                <a href="/admin/" class="dropdown-item">
+                                    <i class="fas fa-cog"></i> Administração
+                                </a>
+                            {% elif user.profile.is_dev or user.is_staff %}
+                                <a href="/admin/" class="dropdown-item">
+                                    <i class="fas fa-cog"></i> Administração
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'logout' %}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Sair
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{% url 'login' %}" class="nav-link">Entrar</a>
+                    <a href="{% url 'registro' %}" class="btn-primary">Cadastrar</a>
+                {% endif %}
+            </nav>
+            
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <img src="{% static 'img/logo.png' %}" alt="Minha Vitrine" class="logo-img-mobile" style="height: 38px; width: auto; object-fit: contain;">
+            <button class="close-menu" id="closeMobileMenu">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="mobile-menu-links">
+            <!-- Search Bar no Mobile -->
+            <form action="{% url 'buscar' %}" method="get" class="mobile-search">
+                <div class="mobile-search-wrapper" style="position: relative;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="q" placeholder="Buscar..." class="mobile-search-input live-search-input" autocomplete="off">
+                    <div class="search-dropdown-results" style="display: none;"></div>
+                </div>
+            </form>
+            
+            <a href="{% url 'home' %}" class="mobile-nav-link">Início</a>
+            {% if categorias %}
+                <button type="button" class="mobile-nav-link mobile-categories-btn" id="navCategoriesBtnMobile" aria-haspopup="dialog" aria-expanded="false">
+                    Categorias
+                </button>
+            {% endif %}
+            <button type="button" class="theme-toggle mobile-theme-toggle" id="themeToggleMobile" title="Modo noturno" aria-label="Alternar modo noturno" style="margin: 0.5rem 1.5rem;">
+                <i class="fas fa-moon"></i> Modo noturno
+            </button>
+            {% if user.is_authenticated %}
+                <a href="{% url 'meus_favoritos' %}" class="mobile-nav-link">Meus Favoritos</a>
+                {% if user.profile.is_dev or user.is_staff %}
+                    <a href="/admin/" class="mobile-nav-link">Administração</a>
+                {% endif %}
+                <a href="{% url 'logout' %}" class="mobile-nav-link">Sair</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="mobile-nav-link">Entrar</a>
+                <a href="{% url 'registro' %}" class="mobile-nav-link">Cadastrar</a>
+            {% endif %}
+        </nav>
+    </div>
+
+    {% if categorias %}
+        <!-- Modal de Categorias -->
+        <div class="category-more" id="categoryMore" role="dialog" aria-label="Categorias" hidden>
+            <div class="category-more-backdrop" id="categoryMoreBackdrop"></div>
+            <div class="category-more-panel" role="document">
+                <div class="category-more-header">
+                    <h3>Categorias</h3>
+                    <button type="button" class="icon-btn" id="categoryMoreClose" aria-label="Fechar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="category-more-list">
+                    {% for categoria in categorias %}
+                        <a class="category-more-item" href="/?categoria={{ categoria.slug }}">{{ categoria.nome }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Messages -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="message message-{{ message.tags }}">
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
+                    <button class="close-message">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <a href="{% url 'home' %}">
+                        <img src="{% static 'img/logo.png' %}" alt="Minha Vitrine" style="height: 70px; width: auto; object-fit: contain; margin-bottom: 0.75rem; display: block;">
+                    </a>
+                    <p>Conectando você aos melhores estabelecimentos e eventos da sua cidade.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Links Rápidos</h4>
+                    <ul>
+                        <li><a href="{% url 'home' %}">Início</a></li>
+                        <li><a href="{% url 'mapa_interativo' %}">Mapa Interativo</a></li>
+                        <li><a href="{% url 'eventos' %}">Eventos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contato</h4>
+                    <p><i class="fas fa-envelope"></i> contato@minhavitrine.com.br</p>
+                    <p><i class="fas fa-phone"></i> (24) 99999-9999</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Redes Sociais</h4>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Minha Vitrine. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
