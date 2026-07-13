@@ -3,6 +3,7 @@ from datetime import datetime, time
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
@@ -56,6 +57,17 @@ class Estabelecimento(models.Model):
         max_length=100, blank=True, verbose_name="Facebook")
 
     # Dados administrativos
+    cpf_validator = RegexValidator(
+        regex=r'^\d{3}\.\d{3}\.\d{3}-\d{2}$',
+        message="CPF deve estar no formato: XXX.XXX.XXX-XX"
+    )
+    cpf = models.CharField(
+        max_length=14,
+        blank=True,
+        validators=[cpf_validator],
+        verbose_name="CPF"
+    )
+    
     cnpj_validator = RegexValidator(
         regex=r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$',
         message="CNPJ deve estar no formato: XX.XXX.XXX/XXXX-XX"
@@ -97,6 +109,11 @@ class Estabelecimento(models.Model):
 
     def __str__(self):
         return self.nome
+
+    def clean(self):
+        super().clean()
+        if not self.cpf and not self.cnpj:
+            raise ValidationError("É obrigatório preencher o CPF ou o CNPJ do estabelecimento.")
 
     def total_favoritos(self):
         return self.favoritos.count()

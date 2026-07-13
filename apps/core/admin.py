@@ -54,12 +54,15 @@ class EstabelecimentoAdmin(admin.ModelAdmin):
             'fields': ('email', 'telefone', 'whatsapp', 'website', 'instagram', 'facebook')
         }),
         ('Dados Administrativos', {
-            'fields': ('cnpj', 'proprietario', 'horario_funcionamento')
+            'fields': ('cpf', 'cnpj', 'proprietario', 'horario_funcionamento')
         }),
         ('Controle', {
             'fields': ('ativo', 'destaque', 'criado_em', 'atualizado_em', 'criado_por')
         }),
     )
+
+    class Media:
+        js = ('js/admin_masks.js',)
 
     def save_model(self, request, obj, form, change):
         if not change:  # Se está criando um novo objeto
